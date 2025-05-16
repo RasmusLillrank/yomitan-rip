@@ -144,6 +144,98 @@ export class AnkiConnect {
     }
 
     /**
+     * @param {import('anki').CardId[]} cardIds
+     * @returns {Promise<number[]>}
+     */
+    async getIntervals(cardIds) {
+        if (!this.enabled) { return []; }
+        await this._checkVersion();
+        const result = await this._invoke('getIntervals', {cards: cardIds});
+        return this._normalizeArray(result, cardIds.length, 'number');
+    }
+
+    /**
+     * @param {import('anki').CardId[]} cardIds
+     * @returns {Promise<boolean[]>}
+     */
+    async areDue(cardIds) {
+        if (!this.enabled) { return []; }
+        await this._checkVersion();
+        const result = await this._invoke('areDue', {cards: cardIds});
+        return this._normalizeArray(result, cardIds.length, 'boolean');
+    }
+
+    /**
+     * @param {import('anki').NoteId[]} noteIds
+     * @returns {Promise<void>}
+     */
+    async postponeNote(noteIds) {
+        const notesInfo = await this.notesInfo(noteIds);
+        if (notesInfo === null) { return; }
+        for (let i = 0; i < notesInfo.length; i++) {
+            const note = notesInfo[i];
+            if (!note || !note.cards) { continue; }
+            const intervals = await this.getIntervals(note.cards);
+            const days = Math.min(...intervals) < 3 ? 1 : Math.floor(Math.random() * 7) + 3;
+            const modDate = new Date().setHours(0, 0, 0, 0);
+            const dueDate = new Date(modDate + days * 1000 * 3600 * 24).setHours(0, 0, 0, 0);
+
+            const tags = await this.getNoteTags(noteIds[i]);
+            const dueRegex = /due:[0-9]+/i;
+            const dueTag = tags.filter((str) => { return dueRegex.test(str); });
+            await (dueTag.length > 0 ? this.replaceTags(noteIds, dueTag[0], `due:${dueDate}`) : this.addTags(noteIds, `due:${dueDate}`));
+
+            await this._invoke('setDueDate', {cards: notesInfo[i]?.cards, days: `${days}`});
+        }
+    }
+
+    /**
+     * @param {import('anki').CardId[]} cardIds
+     * @returns {Promise<(?import('anki').CardModTime)[]>}
+     */
+    async cardsModTime(cardIds) {
+        const result = await this._invoke('cardsModTime', {cards: cardIds});
+        return this._normalizeCardModTime(result);
+    }
+
+    /**
+     * @param {import('anki').NoteId} noteId
+     * @returns {Promise<string[]>}
+     */
+    async getNoteTags(noteId) {
+        const result = await this._invoke('getNoteTags', {note: noteId});
+        return this._normalizeArray(result, -1, 'string');
+    }
+
+    /**
+     * @param {import('anki').NoteId[]} noteIds
+     * @param {string} tag
+     * @returns {Promise<void>}
+     */
+    async addTags(noteIds, tag) {
+        await this._invoke('addTags', {notes: noteIds, tags: tag});
+    }
+
+    /**
+     * @param {import('anki').NoteId[]} noteIds
+     * @param {string} tagToReplace
+     * @param {string} replaceWithTag
+     * @returns {Promise<void>}
+     */
+    async replaceTags(noteIds, tagToReplace, replaceWithTag) {
+        await this._invoke('replaceTags', {notes: noteIds, tag_to_replace: tagToReplace, replace_with_tag: replaceWithTag});
+    }
+
+    /**
+     * @param {import('anki').CardId[]} cardIds
+     * @returns {Promise<(?import('anki').CardReviews)[]>}
+     */
+    async getReivewsOfCards(cardIds) {
+        const result = await this._invoke('getReviewsOfCards', {cards: cardIds});
+        return this._normalizeGetReviewsOfCards(result);
+    }
+
+    /**
      * @param {import('anki').Note} noteWithId
      * @returns {Promise<null>}
      */
@@ -710,6 +802,75 @@ export class AnkiConnect {
                 flags: typeof flags === 'number' ? flags : 0,
             };
             result2.push(item2);
+        }
+        return result2;
+    }
+
+    /**
+     * Transforms raw AnkiConnect data into the CardModTime type.
+     * @param {unknown} result
+     * @returns {(?import('anki').CardModTime)[]}
+     * @throws {Error}
+     */
+    _normalizeCardModTime(result) {
+        if (!Array.isArray(result)) {
+            throw this._createUnexpectedResultError('array', result, '');
+        }
+        /** @type {(?import('anki').CardModTime)[]} */
+        const result2 = [];
+        for (let i = 0, ii = result.length; i < ii; ++i) {
+            const item = /** @type {unknown} */ (result[i]);
+            if (item === null || typeof item !== 'object') {
+                throw this._createError(`Unexpected result type at index ${i}: expected Cards.CardInfo, received ${this._getTypeName(item)}`, result);
+            }
+            const {cardId} = /** @type {{[key: string]: unknown}} */ (item);
+            if (typeof cardId !== 'number') {
+                result2.push(null);
+                continue;
+            }
+            const {mod} = /** @type {{[key: string]: unknown}} */ (item);
+            if (typeof mod !== 'number') {
+                result2.push(null);
+                continue;
+            }
+
+            /** @type {import('anki').CardModTime} */
+            const item2 = {
+                cardId,
+                mod,
+            };
+            result2.push(item2);
+        }
+        return result2;
+    }
+
+    /**
+     * Transforms raw AnkiConnect data into the CardReviews type.
+     * @param {unknown} result
+     * @returns {(?import('anki').CardReviews)[]}
+     * @throws {Error}
+     */
+    _normalizeGetReviewsOfCards(result) {
+        if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+            throw this._createError('Unexpected result type', result);
+        }
+        /** @type {(?import('anki').CardReviews)[]} */
+        const result2 = [];
+        for (const [noteIdStr, reviews] of Object.entries(result)) {
+            /** @type {number[]} */
+            const reviewTimes = [];
+            for (const review of reviews) {
+                const id = /** @type {{[key: string]: unknown}} */ (review).id;
+                if (typeof id !== 'number') {
+                    continue;
+                }
+                reviewTimes.push(id);
+            }
+
+            result2.push({
+                noteId: Number(noteIdStr),
+                reviewTimes,
+            });
         }
         return result2;
     }

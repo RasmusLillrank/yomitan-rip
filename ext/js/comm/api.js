@@ -145,6 +145,73 @@ export class API {
     }
 
     /**
+     * @param {import('api').ApiParam<'getIntervals', 'noteIds'>} noteIds
+     * @returns {Promise<import('api').ApiReturn<'getIntervals'>>}
+     */
+    getIntervals(noteIds) {
+        return this._invoke('getIntervals', {noteIds});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'areDue', 'noteIds'>} noteIds
+     * @returns {Promise<import('api').ApiReturn<'areDue'>>}
+     */
+    areDue(noteIds) {
+        return this._invoke('areDue', {noteIds});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'postponeNote', 'noteIds'>} noteIds
+     * @returns {Promise<import('api').ApiReturn<'postponeNote'>>}
+     */
+    postponeNote(noteIds) {
+        return this._invoke('postponeNote', {noteIds});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'cardsModTime', 'noteIds'>} noteIds
+     * @returns {Promise<import('api').ApiReturn<'cardsModtime'>>}
+     */
+    cardsModTime(noteIds) {
+        return this._invoke('cardsModTime', {noteIds});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'getNoteTags', 'noteId'>} noteId
+     * @returns {Promise<import('api').ApiReturn<'getNoteTags'>>}
+     */
+    getNoteTags(noteId) {
+        return this._invoke('getNoteTags', {noteId});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'addTags', 'noteIds'>} noteIds
+     * @param {import('api').ApiParam<'addTags', 'tag'>} tag
+     * @returns {Promise<import('api').ApiReturn<'addTags'>>}
+     */
+    addTags(noteIds, tag) {
+        return this._invoke('addTags', {noteIds, tag});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'replaceTags', 'noteIds'>} noteIds
+     * @param {import('api').ApiParam<'replaceTags', 'tagToReplace'>} tagToReplace
+     * @param {import('api').ApiParam<'replaceTags', 'replaceWithTag'>} replaceWithTag
+     * @returns {Promise<import('api').ApiReturn<'replaceTags'>>}
+     */
+    replaceTags(noteIds, tagToReplace, replaceWithTag) {
+        return this._invoke('replaceTags', {noteIds, tagToReplace, replaceWithTag});
+    }
+
+    /**
+     * @param {import('api').ApiParam<'getReviewsOfCards', 'noteIds'>} noteIds
+     * @returns {Promise<import('api').ApiReturn<'getReviewsOfCards'>>}
+     */
+    getReviewsOfCards(noteIds) {
+        return this._invoke('getReviewsOfCards', {noteIds});
+    }
+
+    /**
      * @param {import('api').ApiParam<'suspendAnkiCardsForNote', 'noteId'>} noteId
      * @returns {Promise<import('api').ApiReturn<'suspendAnkiCardsForNote'>>}
      */

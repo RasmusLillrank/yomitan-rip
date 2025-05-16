@@ -109,6 +109,8 @@ export class DisplayAnki {
         /** @type {(event: MouseEvent) => void} */
         this._onNoteSaveBind = this._onNoteSave.bind(this);
         /** @type {(event: MouseEvent) => void} */
+        this._onNotePostponeBind = this._onNotePostpone.bind(this);
+        /** @type {(event: MouseEvent) => void} */
         this._onViewNotesButtonClickBind = this._onViewNotesButtonClick.bind(this);
         /** @type {(event: MouseEvent) => void} */
         this._onViewNotesButtonContextMenuBind = this._onViewNotesButtonContextMenu.bind(this);
@@ -271,6 +273,9 @@ export class DisplayAnki {
         for (const node of element.querySelectorAll('.action-button[data-action=save-note]')) {
             eventListeners.addEventListener(node, 'click', this._onNoteSaveBind);
         }
+        for (const node of element.querySelectorAll('.action-button[data-action=postpone-note]')) {
+            eventListeners.addEventListener(node, 'click', this._onNotePostponeBind);
+        }
         for (const node of element.querySelectorAll('.action-button[data-action=view-note]')) {
             eventListeners.addEventListener(node, 'click', this._onViewNotesButtonClickBind);
             eventListeners.addEventListener(node, 'contextmenu', this._onViewNotesButtonContextMenuBind);
@@ -305,6 +310,16 @@ export class DisplayAnki {
     /**
      * @param {MouseEvent} e
      */
+    _onNotePostpone(e) {
+        const element = /** @type {HTMLElement} */ (e.currentTarget);
+        e.preventDefault();
+        const index = this._display.getElementDictionaryEntryIndex(element);
+        void this._postponeAnkiNote(index, element);
+    }
+
+    /**
+     * @param {MouseEvent} e
+     */
     _onShowTags(e) {
         e.preventDefault();
         const element = /** @type {HTMLElement} */ (e.currentTarget);
@@ -330,6 +345,33 @@ export class DisplayAnki {
     _saveButtonFind(index, mode) {
         const entry = this._getEntry(index);
         return entry !== null ? entry.querySelector(`.action-button[data-action=save-note][data-mode="${mode}"]`) : null;
+    }
+
+    /**
+     * @param {number} index
+     * @returns {?HTMLButtonElement}
+     */
+    _postponeButtonFind(index) {
+        const entry = this._getEntry(index);
+        return entry !== null ? entry.querySelector('.action-button[data-action=postpone-note]') : null;
+    }
+
+    /**
+     * @param {number} index
+     * @returns {?HTMLElement}
+     */
+    _postponeTextFind(index) {
+        const entry = this._getEntry(index);
+        return entry !== null ? entry.querySelector('#due-text') : null;
+    }
+
+    /**
+     * @param {number} index
+     * @returns {?HTMLElement}
+     */
+    _postponeDateFind(index) {
+        const entry = this._getEntry(index);
+        return entry !== null ? entry.querySelector('#due-date') : null;
     }
 
     /**
@@ -403,13 +445,44 @@ export class DisplayAnki {
             const dictionaryEntryDetails = await this._getDictionaryEntryDetails(dictionaryEntries);
             if (this._updateDictionaryEntryDetailsToken !== token) { return; }
             this._dictionaryEntryDetails = dictionaryEntryDetails;
-            this._updateSaveButtons(dictionaryEntryDetails);
+            await this._updateSaveButtons(dictionaryEntryDetails);
         } finally {
             resolve();
             if (this._updateSaveButtonsPromise === promise) {
                 this._updateSaveButtonsPromise = null;
             }
         }
+    }
+
+    /**
+     * @param {number} numDays
+     * @returns {string}
+     */
+    prettifyDayDifference(numDays) {
+        if (numDays === 0) {
+            return 'Today';
+        } else if (numDays === 1) {
+            return 'Tomorrow';
+        } else if (numDays > 1) {
+            return `${numDays} days`;
+        } else if (numDays === -1) {
+            return 'Yesterday';
+        } else if (numDays < -1) {
+            return `${numDays} days ago`;
+        }
+        return 'err';
+    }
+
+    /**
+     * @param {Date} start
+     * @param {Date} end
+     * @returns {number}
+     */
+    calculateDayDifference(start, end) {
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        const timedifference = end.getTime() - start.getTime();
+        return Math.floor(timedifference / (1000 * 3600 * 24));
     }
 
     /**
@@ -453,9 +526,37 @@ export class DisplayAnki {
     }
 
     /**
+     * @param {import('anki').NoteId} noteId
+     * @returns {Promise<number>}
+     */
+    async getDueTag(noteId) {
+        const tags = await this._display.application.api.getNoteTags(noteId);
+        const regex = /due:[0-9]+/i;
+        for (let i = 0; i < tags.length; i++) {
+            if (regex.test(tags[i])) {
+                return Number(tags[i].replace(/\D/g, ''));
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * @param {import('anki').NoteId} noteId
+     * @returns {Promise<number>}
+     */
+    async getLatestReview(noteId) {
+        const reviews = await this._display.application.api.getReviewsOfCards([noteId]);
+        const validReviews = reviews.filter((r) => r !== null);
+        if (validReviews.length === 0) {
+            throw new Error('No valid reviews found');
+        }
+        return Math.max(...validReviews[0].reviewTimes);
+    }
+
+    /**
      * @param {import('display-anki').DictionaryEntryDetails[]} dictionaryEntryDetails
      */
-    _updateSaveButtons(dictionaryEntryDetails) {
+    async _updateSaveButtons(dictionaryEntryDetails) {
         const displayTagsAndFlags = this._displayTagsAndFlags;
         for (let i = 0, ii = dictionaryEntryDetails.length; i < ii; ++i) {
             /** @type {?Set<number>} */
@@ -471,6 +572,29 @@ export class DisplayAnki {
 
                     // If entry has noteIds, show the "add duplicate" button.
                     if (Array.isArray(noteIds) && noteIds.length > 0) {
+                        // If entry has noteid, show postpone button
+                        const postponeButton = this._postponeButtonFind(i);
+                        const postponeText = this._postponeTextFind(i);
+                        const postponeDate = this._postponeDateFind(i);
+                        const intervals = await this._display.application.api.getIntervals(noteIds);
+                        if (postponeButton !== null && postponeText !== null && postponeDate !== null && intervals.length === 1 && intervals[0] !== 0) {
+                            // This is really messy, in a proper implementation this would be added into dictionaryEntryDetails instead
+                            const latestReview = await this.getLatestReview(noteIds[0]);
+                            const dueTagTime = await this.getDueTag(noteIds[0]);
+                            const dueTime = (latestReview >= dueTagTime) ?
+                                latestReview + intervals[0] * 1000 * 3600 * 24 :
+                                dueTagTime;
+                            const today = new Date();
+                            const dueDate = new Date(dueTime);
+
+                            postponeButton.disabled = false;
+                            postponeButton.hidden = (ankiError !== null);
+
+                            postponeButton.dataset.noteIds = noteIds.join(' ');
+
+                            postponeText.hidden = (ankiError !== null);
+                            postponeDate.textContent = this.prettifyDayDifference(this.calculateDayDifference(today, dueDate));
+                        }
                         this._updateSaveButtonForDuplicateBehavior(button, noteIds);
                     }
                 }
@@ -694,6 +818,30 @@ export class DisplayAnki {
             this._showErrorNotification(allErrors);
         } else {
             this._hideErrorNotification(true);
+        }
+    }
+
+    /**
+     * @param {number} index
+     * @param {HTMLElement} node
+     */
+    async _postponeAnkiNote(index, node) {
+        const noteIds = this._getNodeNoteIds(node);
+        if (noteIds.length === 0) { return; }
+        await this._display.application.api.postponeNote(noteIds);
+        const button = this._postponeButtonFind(index);
+        const dueText = this._postponeDateFind(index);
+        if (button !== null && dueText !== null) {
+            const intervals = await this._display.application.api.getIntervals(noteIds);
+
+            const latestReview = await this.getLatestReview(noteIds[0]);
+            const dueTagTime = await this.getDueTag(noteIds[0]);
+            const dueTime = (latestReview >= dueTagTime) ?
+                                latestReview + intervals[0] * 1000 * 3600 * 24 :
+                                dueTagTime;
+            const today = new Date();
+            const dueDate = new Date(dueTime);
+            dueText.textContent = this.prettifyDayDifference(this.calculateDayDifference(today, dueDate));
         }
     }
 

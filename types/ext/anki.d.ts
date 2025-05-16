@@ -82,3 +82,13 @@ export type MessageBody = {
     version: number;
     key?: string;
 };
+
+export type CardModTime = {
+    cardId: CardId;
+    mod: number;
+};
+
+export type CardReviews = {
+    noteId: NoteId;
+    reviewTimes: number[];
+};

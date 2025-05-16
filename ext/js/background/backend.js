@@ -155,6 +155,14 @@ export class Backend {
             ['getAnkiNoteInfo',              this._onApiGetAnkiNoteInfo.bind(this)],
             ['injectAnkiNoteMedia',          this._onApiInjectAnkiNoteMedia.bind(this)],
             ['viewNotes',                    this._onApiViewNotes.bind(this)],
+            ['getIntervals',                 this._onApiGetIntervals.bind(this)],
+            ['areDue',                       this._onApiAreDue.bind(this)],
+            ['postponeNote',                 this._onApiPostponeNote.bind(this)],
+            ['cardsModTime',                 this._onApiCardsModTime.bind(this)],
+            ['getNoteTags',                  this._onApiGetNoteTags.bind(this)],
+            ['addTags',                      this._onApiAddTags.bind(this)],
+            ['replaceTags',                  this._onApiReplaceTags.bind(this)],
+            ['getReviewsOfCards',            this._onApiGetReviewsOfCards.bind(this)],
             ['suspendAnkiCardsForNote',      this._onApiSuspendAnkiCardsForNote.bind(this)],
             ['commandExec',                  this._onApiCommandExec.bind(this)],
             ['getTermAudioInfoList',         this._onApiGetTermAudioInfoList.bind(this)],
@@ -718,6 +726,62 @@ export class Backend {
         }
         await this._anki.guiBrowseNotes(noteIds);
         return 'browse';
+    }
+
+    /** @type {import('api').ApiHandler<'getIntervals'>} */
+    async _onApiGetIntervals({noteIds}) {
+        const notesInfo = await this._anki.notesInfo(noteIds);
+        /** @type {number[]} */
+        // @ts-expect-error - ts is not smart enough to realize that filtering !!x removes null and undefined
+        const cardIds = notesInfo.flatMap((x) => x?.cards).filter((x) => !!x);
+        return await this._anki.getIntervals(cardIds);
+    }
+
+    /** @type {import('api').ApiHandler<'areDue'>} */
+    async _onApiAreDue({noteIds}) {
+        const notesInfo = await this._anki.notesInfo(noteIds);
+        /** @type {number[]} */
+        // @ts-expect-error - ts is not smart enough to realize that filtering !!x removes null and undefined
+        const cardIds = notesInfo.flatMap((x) => x?.cards).filter((x) => !!x);
+        return await this._anki.areDue(cardIds);
+    }
+
+    /** @type {import('api').ApiHandler<'postponeNote'>} */
+    async _onApiPostponeNote({noteIds}) {
+        return await this._anki.postponeNote(noteIds);
+    }
+
+    /** @type {import('api').ApiHandler<'cardsModTime'>} */
+    async _onApiCardsModTime({noteIds}) {
+        const notesInfo = await this._anki.notesInfo(noteIds);
+        /** @type {number[]} */
+        // @ts-expect-error - ts is not smart enough to realize that filtering !!x removes null and undefined
+        const cardIds = notesInfo.flatMap((x) => x?.cards).filter((x) => !!x);
+        return await this._anki.cardsModTime(cardIds);
+    }
+
+    /** @type {import('api').ApiHandler<'getNoteTags'>} */
+    async _onApiGetNoteTags({noteId}) {
+        return await this._anki.getNoteTags(noteId);
+    }
+
+    /** @type {import('api').ApiHandler<'addTags'>} */
+    async _onApiAddTags({noteIds, tag}) {
+        await this._anki.addTags(noteIds, tag);
+    }
+
+    /** @type {import('api').ApiHandler<'replaceTags'>} */
+    async _onApiReplaceTags({noteIds, tagToReplace, replaceWithTag}) {
+        await this._anki.replaceTags(noteIds, tagToReplace, replaceWithTag);
+    }
+
+    /** @type {import('api').ApiHandler<'getReviewsOfCards'>} */
+    async _onApiGetReviewsOfCards({noteIds}) {
+        const notesInfo = await this._anki.notesInfo(noteIds);
+        /** @type {number[]} */
+        // @ts-expect-error - ts is not smart enough to realize that filtering !!x removes null and undefined
+        const cardIds = notesInfo.flatMap((x) => x?.cards).filter((x) => !!x);
+        return await this._anki.getReivewsOfCards(cardIds);
     }
 
     /** @type {import('api').ApiHandler<'suspendAnkiCardsForNote'>} */

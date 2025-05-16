@@ -11,6 +11,11 @@
             <button type="button" class="action-button action-button-collapsible" data-action="view-tags" hidden disabled>
                 <span class="action-icon icon" data-icon="tag"></span>
             </button>
+            <span style="font-size:0.7em" id="due-text" hidden>Due: <span id="due-date"></span></span>
+            <button type="button" class="action-button" data-action="postpone-note" hidden disabled title="Postpone note" data-hotkey='["postponeNote","title","Postponed note ({0})"]' data-menu-position="left below h-cover v-cover">
+                <span class="action-icon icon outline-item-icon" data-icon="postpone-note"></span>
+                <span class="action-button-badge icon" hidden></span>
+            </button>
             <button type="button" class="action-button" data-action="view-note" hidden disabled title="View added note" data-hotkey='["viewNotes","title","View added note ({0})"]' data-menu-position="left below h-cover v-cover">
                 <span class="action-icon icon color-icon" data-icon="view-note"></span>
                 <span class="action-button-badge icon" hidden></span>

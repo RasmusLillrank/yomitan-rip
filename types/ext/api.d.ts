@@ -209,6 +209,57 @@ type ApiSurface = {
         };
         return: Settings.AnkiNoteGuiMode;
     };
+    getIntervals: {
+        params: {
+            noteIds: Anki.NoteId[];
+        };
+        return: number[];
+    };
+    areDue: {
+        params: {
+            noteIds: Anki.NoteId[];
+        };
+        return: boolean[];
+    };
+    postponeNote: {
+        params: {
+            noteIds: Anki.NoteId[];
+        };
+        return: void;
+    };
+    cardsModTime: {
+        params: {
+            noteIds: Anki.NoteId[];
+        };
+        return: (Anki.CardModTime | null)[];
+    };
+    addTags: {
+        params: {
+            noteIds: Anki.NoteId[];
+            tag: string;
+        };
+        return: void;
+    };
+    replaceTags: {
+        params: {
+            noteIds: Anki.NoteId[];
+            tagToReplace: string;
+            replaceWithTag: string;
+        };
+        return: void;
+    };
+    getNoteTags: {
+        params: {
+            noteId: Anki.NoteId;
+        };
+        return: string[];
+    };
+    getReviewsOfCards: {
+        params: {
+            noteIds: Anki.NoteId[];
+        };
+        return: (Anki.CardReviews | null)[];
+    };
     suspendAnkiCardsForNote: {
         params: {
             noteId: Anki.NoteId;

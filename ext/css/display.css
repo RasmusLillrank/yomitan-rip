@@ -701,6 +701,7 @@ button.action-button:active {
     box-shadow: none;
 }
 .icon[data-icon=view-note]      { background-image: url('/images/view-note.svg'); }
+.icon[data-icon=postpone-note]      { --icon-image: url('/images/up-arrow.svg'); }
 .icon[data-icon=add-term-kanji] { background-image: url('/images/add-term-kanji.svg'); }
 .icon[data-icon=add-term-kana]  { background-image: url('/images/add-term-kana.svg'); }
 .icon[data-icon=add-kanji]  { background-image: url('/images/add-term-kanji.svg'); }
