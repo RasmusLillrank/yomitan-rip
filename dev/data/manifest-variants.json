@@ -251,7 +251,7 @@
                     ],
                     "value": {
                         "gecko": {
-                            "id": "{6b733b82-9261-47ee-a595-2dda294a4d08}",
+                            "id": "{c04794b7-f420-40b0-aca1-0597062dc2d4}",
                             "strict_min_version": "115.0"
                         },
                         "gecko_android": {
@@ -304,7 +304,7 @@
                         "gecko",
                         "id"
                     ],
-                    "value": "{2d13e145-294e-4ead-9bce-b4644b203a00}"
+                    "value": "{c04794b7-f420-40b0-aca1-0597062dc2d4}"
                 },
                 {
                     "action": "set",
